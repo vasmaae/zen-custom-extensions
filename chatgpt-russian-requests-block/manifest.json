@@ -1,0 +1,42 @@
+{
+  "manifest_version": 3,
+  "name": "ChatGPT Russia Blocker",
+  "version": "1.0",
+  "description": "Блокирует доступ к ChatGPT для российских IP-адресов",
+  "permissions": [
+    "webRequest",
+    "webRequestBlocking",
+    "notifications",
+    "storage"
+  ],
+  "host_permissions": [
+    "<all_urls>",
+    "*://*/*"
+  ],
+  "background": {
+    "scripts": [
+      "background.js"
+    ]
+  },
+  "action": {
+    "default_icon": {
+      "16": "icon.webp",
+      "48": "icon.webp"
+    },
+    "default_title": "ChatGPT Blocker - Настройки"
+  },
+  "icons": {
+    "48": "icon.webp",
+    "128": "icon.webp"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "chatgpt-russian-requests-block@fuck.you",
+      "strict_min_version": "60.0"
+    }
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  }
+}
