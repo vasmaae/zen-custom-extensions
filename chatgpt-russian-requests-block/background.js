@@ -1,7 +1,7 @@
-let blockedDomains = ['chat.openai.com', 'chatgpt.com'];
+let blockedDomains = ['chat.openai.com', 'chatgpt.com', 'grok.com'];
 let blockedRegions = ['RU'];
 const IPINFO_TOKEN = 'a904d519b47366';
-const NOTIFICATION_DEBOUNCE_TIME = 300;
+const NOTIFICATION_DEBOUNCE_TIME = 1000;
 const notificationCache = new Map();
 let currentListener = null;
 
@@ -25,7 +25,7 @@ async function initSettings() {
   } catch (error) {
     console.error('Ошибка инициализации настроек:', error);
 
-    blockedDomains = ['chat.openai.com', 'chatgpt.com'];
+    blockedDomains = ['chat.openai.com', 'chatgpt.com', 'grok.com'];
     blockedRegions = ['RU'];
     registerWebRequestListener();
   }
@@ -160,8 +160,10 @@ function handleStorageChanges(changes, area) {
 browser.action.onClicked.addListener((tab) => {
   browser.runtime.openOptionsPage();
 });
-initSettings();
 browser.storage.onChanged.addListener(handleStorageChanges);
+
+initSettings();
+browser.runtime.onStartup.addListener(initSettings);
 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
