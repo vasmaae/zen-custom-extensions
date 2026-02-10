@@ -5,6 +5,11 @@ const IPINFO_TOKEN = 'a904d519b47366';
 const NOTIFICATION_DEBOUNCE_TIME = 1000;
 const notificationCache = new Map();
 
+const USERINFO_CACHE_TTL = 1000;
+let userInfoCache = null;
+let userInfoCacheTime = 0;
+let userInfoInFlight = null;
+
 let currentListener = null;
 
 async function initSettings() {
@@ -60,14 +65,34 @@ async function registerWebRequestListener() {
 
 async function getUserInfo() {
   try {
-    const response = await fetch(`https://ipinfo.io/json?token=${IPINFO_TOKEN}`);
+    const now = Date.now();
 
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    if (userInfoCache && (now - userInfoCacheTime) < USERINFO_CACHE_TTL) {
+      return userInfoCache;
+    }
 
-    return await response.json();
+    if (userInfoInFlight) {
+      return await userInfoInFlight;
+    }
+
+    userInfoInFlight = (async () => {
+      const response = await fetch(`https://ipinfo.io/json?token=${IPINFO_TOKEN}`);
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+      const data = await response.json();
+
+      userInfoCache = data;
+      userInfoCacheTime = Date.now();
+
+      return data;
+    })();
+
+    return await userInfoInFlight;
   } catch (error) {
     console.error('Ошибка получения данных IP:', error);
     return null;
+  } finally {
+    userInfoInFlight = null;
   }
 }
 
