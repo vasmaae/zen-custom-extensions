@@ -1,8 +1,10 @@
 let blockedDomains = ['chat.openai.com', 'chatgpt.com', 'grok.com'];
 let blockedRegions = ['RU'];
+
 const IPINFO_TOKEN = 'a904d519b47366';
 const NOTIFICATION_DEBOUNCE_TIME = 1000;
 const notificationCache = new Map();
+
 let currentListener = null;
 
 async function initSettings() {
@@ -24,14 +26,13 @@ async function initSettings() {
     registerWebRequestListener();
   } catch (error) {
     console.error('Ошибка инициализации настроек:', error);
-
     blockedDomains = ['chat.openai.com', 'chatgpt.com', 'grok.com'];
     blockedRegions = ['RU'];
     registerWebRequestListener();
   }
 }
 
-function registerWebRequestListener() {
+async function registerWebRequestListener() {
   if (currentListener) {
     browser.webRequest.onBeforeRequest.removeListener(currentListener);
   }
@@ -60,7 +61,9 @@ function registerWebRequestListener() {
 async function getUserInfo() {
   try {
     const response = await fetch(`https://ipinfo.io/json?token=${IPINFO_TOKEN}`);
+
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
     return await response.json();
   } catch (error) {
     console.error('Ошибка получения данных IP:', error);
@@ -119,9 +122,9 @@ async function blockRequest(details) {
         console.log('Заблокирован доступ к:', hostname, '| Страна:', userInfo.country);
         showNotification(userInfo);
       }
+
       return { cancel: true };
     }
-
     console.log('Доступ разрешён к:', hostname, '| Страна:', userInfo?.country || 'неизвестно');
     return { cancel: false };
   } catch (error) {
@@ -157,12 +160,14 @@ function handleStorageChanges(changes, area) {
   }
 }
 
-browser.action.onClicked.addListener((tab) => {
+browser.browserAction.onClicked.addListener((tab) => {
   browser.runtime.openOptionsPage();
 });
+
 browser.storage.onChanged.addListener(handleStorageChanges);
 
-initSettings();
+browser.runtime.onInstalled.addListener(initSettings);
+
 browser.runtime.onStartup.addListener(initSettings);
 
 if (typeof module !== 'undefined' && module.exports) {
