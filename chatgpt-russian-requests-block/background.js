@@ -1,7 +1,7 @@
-let blockedDomains = ['chat.openai.com', 'chatgpt.com', 'grok.com'];
-let blockedRegions = ['RU'];
+let blockedDomains = ["chat.openai.com", "chatgpt.com", "grok.com"];
+let blockedRegions = ["RU"];
 
-const IPINFO_TOKEN = 'a904d519b47366';
+const IPINFO_TOKEN = "a904d519b47366";
 const NOTIFICATION_DEBOUNCE_TIME = 1000;
 const notificationCache = new Map();
 
@@ -14,15 +14,24 @@ let currentListener = null;
 
 async function initSettings() {
   try {
-    const result = await browser.storage.local.get(['blockedDomains', 'blockedRegions']);
+    const result = await browser.storage.local.get([
+      "blockedDomains",
+      "blockedRegions",
+    ]);
 
-    if (Array.isArray(result.blockedDomains) && result.blockedDomains.length > 0) {
+    if (
+      Array.isArray(result.blockedDomains) &&
+      result.blockedDomains.length > 0
+    ) {
       blockedDomains = result.blockedDomains;
     } else {
       await browser.storage.local.set({ blockedDomains });
     }
 
-    if (Array.isArray(result.blockedRegions) && result.blockedRegions.length > 0) {
+    if (
+      Array.isArray(result.blockedRegions) &&
+      result.blockedRegions.length > 0
+    ) {
       blockedRegions = result.blockedRegions;
     } else {
       await browser.storage.local.set({ blockedRegions });
@@ -30,9 +39,9 @@ async function initSettings() {
 
     registerWebRequestListener();
   } catch (error) {
-    console.error('Ошибка инициализации настроек:', error);
-    blockedDomains = ['chat.openai.com', 'chatgpt.com', 'grok.com'];
-    blockedRegions = ['RU'];
+    console.error("Ошибка инициализации настроек:", error);
+    blockedDomains = ["chat.openai.com", "chatgpt.com", "grok.com"];
+    blockedRegions = ["RU"];
     registerWebRequestListener();
   }
 }
@@ -42,24 +51,24 @@ async function registerWebRequestListener() {
     browser.webRequest.onBeforeRequest.removeListener(currentListener);
   }
 
-  const targetUrls = blockedDomains.flatMap(domain => [
+  const targetUrls = blockedDomains.flatMap((domain) => [
     `*://${domain}/*`,
-    `*://*.${domain}/*`
+    `*://*.${domain}/*`,
   ]);
 
   currentListener = async (details) => {
     try {
       return await blockRequest(details);
     } catch (error) {
-      console.error('Ошибка в обработчике запроса:', error);
+      console.error("Ошибка в обработчике запроса:", error);
       return { cancel: false };
     }
   };
 
   browser.webRequest.onBeforeRequest.addListener(
     currentListener,
-    { urls: targetUrls.length > 0 ? targetUrls : ['<all_urls>'] },
-    ['blocking']
+    { urls: targetUrls.length > 0 ? targetUrls : ["<all_urls>"] },
+    ["blocking"],
   );
 }
 
@@ -67,7 +76,7 @@ async function getUserInfo() {
   try {
     const now = Date.now();
 
-    if (userInfoCache && (now - userInfoCacheTime) < USERINFO_CACHE_TTL) {
+    if (userInfoCache && now - userInfoCacheTime < USERINFO_CACHE_TTL) {
       return userInfoCache;
     }
 
@@ -76,8 +85,11 @@ async function getUserInfo() {
     }
 
     userInfoInFlight = (async () => {
-      const response = await fetch(`https://ipinfo.io/json?token=${IPINFO_TOKEN}`);
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      const response = await fetch(
+        `https://api.ipinfo.io/lite/me?token=${IPINFO_TOKEN}`,
+      );
+      if (!response.ok)
+        throw new Error(`HTTP error! status: ${response.status}`);
 
       const data = await response.json();
 
@@ -89,7 +101,7 @@ async function getUserInfo() {
 
     return await userInfoInFlight;
   } catch (error) {
-    console.error('Ошибка получения данных IP:', error);
+    console.error("Ошибка получения данных IP:", error);
     return null;
   } finally {
     userInfoInFlight = null;
@@ -97,14 +109,14 @@ async function getUserInfo() {
 }
 
 function showNotification(userInfo) {
-  const message = `IP: ${userInfo.ip}\nСтрана: ${userInfo.country}\nЧасовой пояс: ${userInfo.timezone}`;
+  const message = `IP: ${userInfo.ip}\nСтрана: ${userInfo.country_code}`;
 
   browser.notifications.create({
-    type: 'basic',
-    iconUrl: 'icon.png',
-    title: '⚠️ Доступ заблокирован',
+    type: "basic",
+    iconUrl: "icon.png",
+    title: "⚠️ Доступ заблокирован",
     message: message,
-    priority: 2
+    priority: 2,
   });
 }
 
@@ -112,7 +124,7 @@ function shouldShowNotification(hostname) {
   const now = Date.now();
   const lastTime = notificationCache.get(hostname);
 
-  if (lastTime && (now - lastTime) < NOTIFICATION_DEBOUNCE_TIME) {
+  if (lastTime && now - lastTime < NOTIFICATION_DEBOUNCE_TIME) {
     return false;
   }
 
@@ -132,8 +144,8 @@ async function blockRequest(details) {
     const url = new URL(details.url);
     const hostname = url.hostname;
 
-    const isBlockedDomain = blockedDomains.some(domain =>
-      hostname === domain || hostname.endsWith(`.${domain}`)
+    const isBlockedDomain = blockedDomains.some(
+      (domain) => hostname === domain || hostname.endsWith(`.${domain}`),
     );
 
     if (!isBlockedDomain) {
@@ -142,45 +154,59 @@ async function blockRequest(details) {
 
     const userInfo = await getUserInfo();
 
-    if (userInfo && blockedRegions.includes(userInfo.country)) {
+    if (userInfo && blockedRegions.includes(userInfo.country_code)) {
       if (shouldShowNotification(hostname)) {
-        console.log('Заблокирован доступ к:', hostname, '| Страна:', userInfo.country);
+        console.log(
+          "Заблокирован доступ к:",
+          hostname,
+          "| Страна:",
+          userInfo.country_code,
+        );
         showNotification(userInfo);
       }
 
       return { cancel: true };
     }
-    console.log('Доступ разрешён к:', hostname, '| Страна:', userInfo?.country || 'неизвестно');
+    console.log(
+      "Доступ разрешён к:",
+      hostname,
+      "| Страна:",
+      userInfo?.country || "неизвестно",
+    );
     return { cancel: false };
   } catch (error) {
-    console.error('Ошибка в blockRequest:', error);
+    console.error("Ошибка в blockRequest:", error);
     return { cancel: false };
   }
 }
 
 function handleStorageChanges(changes, area) {
-  if (area !== 'local') return;
+  if (area !== "local") return;
 
   let needUpdate = false;
 
   if (changes.blockedDomains) {
-    if (Array.isArray(changes.blockedDomains.newValue) &&
-      changes.blockedDomains.newValue.length > 0) {
+    if (
+      Array.isArray(changes.blockedDomains.newValue) &&
+      changes.blockedDomains.newValue.length > 0
+    ) {
       blockedDomains = changes.blockedDomains.newValue;
       needUpdate = true;
     }
   }
 
   if (changes.blockedRegions) {
-    if (Array.isArray(changes.blockedRegions.newValue) &&
-      changes.blockedRegions.newValue.length > 0) {
+    if (
+      Array.isArray(changes.blockedRegions.newValue) &&
+      changes.blockedRegions.newValue.length > 0
+    ) {
       blockedRegions = changes.blockedRegions.newValue;
       needUpdate = true;
     }
   }
 
   if (needUpdate) {
-    console.log('Настройки обновлены, перерегистрируем listener');
+    console.log("Настройки обновлены, перерегистрируем listener");
     registerWebRequestListener();
   }
 }
@@ -195,7 +221,7 @@ browser.runtime.onInstalled.addListener(initSettings);
 
 browser.runtime.onStartup.addListener(initSettings);
 
-if (typeof module !== 'undefined' && module.exports) {
+if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     getBlockedDomains: () => blockedDomains,
     getBlockedRegions: () => blockedRegions,
@@ -204,6 +230,6 @@ if (typeof module !== 'undefined' && module.exports) {
     },
     setBlockedRegions: async (regions) => {
       await browser.storage.local.set({ blockedRegions: regions });
-    }
+    },
   };
 }
